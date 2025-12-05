@@ -1,18 +1,44 @@
 import React, { useState } from 'react';
-import { mockLogin } from '../services/storageService';
+import { loginWithGoogle, loginAsDemo } from '../services/storageService';
+import { AlertCircle, UserCircle2 } from 'lucide-react';
 
 const AuthScreen: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
-  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
+  const handleGoogleLogin = async () => {
     setLoading(true);
-    setTimeout(async () => {
-      await mockLogin(email);
+    setError(null);
+    try {
+      await loginWithGoogle();
       onLogin();
-    }, 800);
+    } catch (err: any) {
+      console.error(err);
+      if (err.code === 'auth/popup-closed-by-user') {
+          setError('Inicio de sesión cancelado.');
+      } else if (err.code === 'auth/configuration-not-found') {
+          setError('Error de configuración. Revisa services/firebase.ts');
+      } else if (err.code === 'auth/unauthorized-domain') {
+          setError('Dominio no autorizado en Firebase. Por favor agrega este dominio en la consola de Firebase o usa el Modo Invitado.');
+      } else {
+          setError(`Error: ${err.message || 'No se pudo conectar.'}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+        await loginAsDemo();
+        onLogin();
+    } catch (e) {
+        setError('Error al iniciar modo demo.');
+    } finally {
+        setLoading(false);
+    }
   };
 
   return (
@@ -25,37 +51,52 @@ const AuthScreen: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
           <h1 className="text-3xl font-bold text-gray-800 dark:text-white">PostFlow AI</h1>
           <p className="text-gray-500 dark:text-gray-400 mt-2">Gestiona tus redes sociales con Inteligencia Artificial</p>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-            <input
-              type="email"
-              required
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500"
-              placeholder="tu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
+        
+        <div className="space-y-4">
           <button
-            type="submit"
+            onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 dark:hover:bg-indigo-500 transition-colors shadow-lg disabled:opacity-70 flex justify-center"
+            className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-white py-3 rounded-lg font-bold hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors shadow-sm hover:shadow-md disabled:opacity-70 flex items-center justify-center gap-3"
           >
             {loading ? (
-                <span className="flex items-center">
-                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Entrando...
-                </span>
-            ) : 'Entrar / Registrarse'}
+                <svg className="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            ) : (
+                <>
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                    <span>Continuar con Google</span>
+                </>
+            )}
           </button>
-        </form>
+
+          <div className="relative flex py-2 items-center">
+            <div className="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
+            <span className="flex-shrink-0 mx-4 text-gray-400 text-xs">O</span>
+            <div className="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
+          </div>
+
+          <button
+            onClick={handleDemoLogin}
+            disabled={loading}
+            className="w-full bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 py-3 rounded-lg font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors flex items-center justify-center gap-3"
+          >
+            <UserCircle2 size={20} />
+            <span>Modo Invitado (Demo)</span>
+          </button>
+        </div>
+
+        {error && (
+            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-sm rounded-lg flex items-start gap-2">
+                <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+                <span>{error}</span>
+            </div>
+        )}
+
         <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
             <p className="text-center text-xs text-gray-400 dark:text-gray-500">
-            Demo Version • No password required
+            Configure firebase.ts con sus claves reales para producción.
             </p>
         </div>
       </div>
