@@ -3,12 +3,16 @@ import { CompanyProfile, GeneratedContent, Platform } from "../types";
 
 // Helper to safely get API Key checking multiple environment variable standards
 const getAPIKey = (): string => {
-  // 1. Check standard process.env (Webpack/Node/Create-React-App)
+  // 1. Try accessing process.env.API_KEY directly inside try-catch.
+  // This supports environments where 'process' is undefined but the bundler
+  // replaces 'process.env.API_KEY' with a string literal.
   try {
-    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-      return process.env.API_KEY;
-    }
-  } catch (e) {}
+    // @ts-ignore
+    const key = process.env.API_KEY;
+    if (key) return key;
+  } catch (e) {
+    // ReferenceError if process is not defined and not replaced
+  }
 
   // 2. Check Vite standard (import.meta.env)
   try {
