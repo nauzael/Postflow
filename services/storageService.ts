@@ -4,9 +4,15 @@ import { CompanyProfile, SocialPost, User, PostStatus, Platform } from "../types
 const USER_KEY = 'postflow_user';
 const COMPANY_KEY = 'postflow_company';
 const POSTS_KEY = 'postflow_posts';
+const EVENT_NAME = 'postflow-storage-update';
 
 // Mock Data Generators
 const generateId = () => Math.random().toString(36).substr(2, 9);
+
+// Helper to notify listeners
+const notifyListeners = () => {
+  window.dispatchEvent(new Event(EVENT_NAME));
+};
 
 // User Auth Simulation
 export const mockLogin = async (email: string): Promise<User> => {
@@ -17,6 +23,7 @@ export const mockLogin = async (email: string): Promise<User> => {
     photoURL: `https://ui-avatars.com/api/?name=${email}&background=4f46e5&color=fff`
   };
   localStorage.setItem(USER_KEY, JSON.stringify(user));
+  notifyListeners();
   return user;
 };
 
@@ -27,11 +34,13 @@ export const getCurrentUser = (): User | null => {
 
 export const logout = () => {
   localStorage.removeItem(USER_KEY);
+  notifyListeners();
 };
 
 // Company Profile
 export const saveCompanyProfile = (profile: CompanyProfile) => {
   localStorage.setItem(COMPANY_KEY, JSON.stringify(profile));
+  notifyListeners();
 };
 
 export const getCompanyProfile = (): CompanyProfile | null => {
@@ -58,6 +67,7 @@ export const savePost = (post: Omit<SocialPost, 'id' | 'createdAt'>) => {
   };
   posts.push(newPost);
   localStorage.setItem(POSTS_KEY, JSON.stringify(posts));
+  notifyListeners();
   return newPost;
 };
 
@@ -67,6 +77,7 @@ export const updatePost = (post: SocialPost) => {
   if (index !== -1) {
     posts[index] = post;
     localStorage.setItem(POSTS_KEY, JSON.stringify(posts));
+    notifyListeners();
   }
 };
 
@@ -78,28 +89,60 @@ export const getPosts = (): SocialPost[] => {
 export const deletePost = (id: string) => {
   const posts = getPosts().filter(p => p.id !== id);
   localStorage.setItem(POSTS_KEY, JSON.stringify(posts));
+  notifyListeners();
 };
 
 // Seed initial data if empty
 export const seedData = (userId: string) => {
+  let changed = false;
   if (!getCompanyProfile()) {
-    saveCompanyProfile({
+    localStorage.setItem(COMPANY_KEY, JSON.stringify({
       userId,
       name: "TechNova",
       industry: "Tecnología",
       tone: "Innovador y Profesional",
       description: "Líderes en soluciones SaaS para el futuro del trabajo.",
       keywords: ["SaaS", "AI", "Futuro"]
-    });
+    }));
+    changed = true;
   }
   if (getPosts().length === 0) {
-      // Add some sample posts
-      savePost({
+      const samplePost: SocialPost = {
+          id: generateId(),
           userId,
           content: "¡Estamos emocionados de lanzar nuestra nueva feature de IA! #TechNova #AI",
           platform: Platform.Twitter,
           status: PostStatus.Published,
-          scheduledDate: new Date(Date.now() - 86400000).toISOString()
-      });
+          scheduledDate: new Date(Date.now() - 86400000).toISOString(),
+          createdAt: new Date().toISOString(),
+          analytics: {
+            postId: generateId(),
+            likes: 120,
+            shares: 45,
+            comments: 12,
+            impressions: 1200,
+            engagementRate: 3.5
+          }
+      };
+      localStorage.setItem(POSTS_KEY, JSON.stringify([samplePost]));
+      changed = true;
   }
+  if (changed) notifyListeners();
+};
+
+// React Hook for subscription
+import { useState, useEffect } from 'react';
+
+export const usePosts = () => {
+  const [posts, setPosts] = useState<SocialPost[]>(getPosts());
+
+  useEffect(() => {
+    const handleUpdate = () => setPosts(getPosts());
+    window.addEventListener(EVENT_NAME, handleUpdate);
+    // Initial fetch to ensure sync
+    handleUpdate(); 
+    return () => window.removeEventListener(EVENT_NAME, handleUpdate);
+  }, []);
+
+  return posts;
 };

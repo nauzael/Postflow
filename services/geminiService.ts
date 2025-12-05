@@ -1,42 +1,60 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { CompanyProfile, GeneratedContent } from "../types";
+import { CompanyProfile, GeneratedContent, Platform } from "../types";
 
-// Schema for structured output
-const socialPostSchema: Schema = {
-  type: Type.OBJECT,
-  properties: {
-    twitter: { type: Type.STRING, description: "A short, engaging tweet (under 280 chars) with hashtags." },
-    linkedin: { type: Type.STRING, description: "A professional, insightful post suitable for LinkedIn." },
-    instagram: { type: Type.STRING, description: "A visual-heavy caption with emojis and a block of hashtags." },
-    facebook: { type: Type.STRING, description: "A conversational and community-focused post." },
-  },
-  required: ["twitter", "linkedin", "instagram", "facebook"],
+// Helper to construct dynamic schema based on selected platforms
+const createDynamicSchema = (platforms: Platform[]): Schema => {
+  const properties: Record<string, any> = {};
+  const required: string[] = [];
+
+  platforms.forEach(p => {
+    const key = p.toLowerCase();
+    properties[key] = { type: Type.STRING, description: `Content optimized for ${p}` };
+    required.push(key);
+  });
+
+  return {
+    type: Type.OBJECT,
+    properties,
+    required,
+  };
 };
 
 export const generateSocialPosts = async (
   topic: string,
   company: CompanyProfile,
+  platforms: Platform[],
   modelName: string = "gemini-2.5-flash"
 ): Promise<GeneratedContent | null> => {
   try {
-    // Initialize inside function to avoid startup crashes if environment variables are missing
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+    // Rules per platform
+    const rules = {
+      [Platform.Twitter]: "Max 280 chars, concise, heavy use of abbreviations if needed, 2-3 hashtags.",
+      [Platform.LinkedIn]: "Professional tone, structured formatting (bullet points), focus on industry value, 3-5 hashtags.",
+      [Platform.Instagram]: "Visual-first caption, engaging hook, line breaks for readability, block of 10-15 hashtags at the bottom.",
+      [Platform.Facebook]: "Conversational, community-focused, encourages sharing/comments, moderate length."
+    };
+
+    const selectedRules = platforms.map(p => `- ${p}: ${rules[p]}`).join("\n");
 
     const prompt = `
       Actúa como un experto Community Manager para la empresa "${company.name}".
       
       Detalles de la empresa:
       - Industria: ${company.industry}
-      - Tono de voz: ${company.tone}
+      - Tono: ${company.tone}
       - Descripción: ${company.description}
       
-      Tarea: Genera variaciones de posts para redes sociales sobre el siguiente tema: "${topic}".
+      Tarea: Genera posts para las siguientes redes sociales sobre el tema: "${topic}".
       
-      Requisitos:
-      1. Adapta el contenido a la audiencia y formato de cada red social.
-      2. Mantén el tono de marca definido.
-      3. Incluye hashtags relevantes.
-      4. Devuelve SOLAMENTE el objeto JSON.
+      Reglas Específicas por Red Social:
+      ${selectedRules}
+      
+      Requisitos Globales:
+      1. Mantén el tono de marca "${company.tone}".
+      2. Usa emojis apropiados.
+      3. Devuelve SOLAMENTE el objeto JSON con las claves correspondientes a las redes solicitadas (${platforms.map(p => p.toLowerCase()).join(', ')}).
     `;
 
     const response = await ai.models.generateContent({
@@ -44,7 +62,7 @@ export const generateSocialPosts = async (
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        responseSchema: socialPostSchema,
+        responseSchema: createDynamicSchema(platforms),
         temperature: 0.7,
       },
     });
@@ -59,8 +77,36 @@ export const generateSocialPosts = async (
   }
 };
 
+export const generateAIImage = async (prompt: string, style: string = 'photorealistic'): Promise<string | null> => {
+    try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        
+        const imagePrompt = `Create a high quality, professional social media image about: ${prompt}. Style: ${style}. Aspect ratio 1:1.`;
+
+        const response = await ai.models.generateImages({
+            model: 'imagen-4.0-generate-001',
+            prompt: imagePrompt,
+            config: {
+              numberOfImages: 1,
+              outputMimeType: 'image/jpeg',
+              aspectRatio: '1:1',
+            },
+        });
+
+        // Handle Imagen response structure
+        const base64Image = response.generatedImages?.[0]?.image?.imageBytes;
+        
+        if (base64Image) {
+            return `data:image/jpeg;base64,${base64Image}`;
+        }
+        return null;
+    } catch (error) {
+        console.error("Error generating image:", error);
+        return null;
+    }
+};
+
 export const analyzePostImpact = async (content: string, platform: string): Promise<{ score: number; suggestion: string }> => {
-    // A simplified helper to "analyze" a post before publishing
     try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         
