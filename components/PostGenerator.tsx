@@ -343,7 +343,8 @@ const PostGenerator: React.FC = () => {
 
     } catch (error) {
       console.error(error);
-      setMessage({ type: 'error', text: 'Error en la generación. Intenta de nuevo.' });
+      const err = error as Error;
+      setMessage({ type: 'error', text: `Error: ${err.message || 'Intenta de nuevo.'}` });
     } finally {
       setLoading(false);
       setGeneratingImage(false);
@@ -542,7 +543,7 @@ const PostGenerator: React.FC = () => {
         </div>
 
         {/* RIGHT COLUMN: PREVIEW & EDITOR & ACTIONS */}
-        <div className="lg:col-span-2 xl:col-span-3 h-full">
+        <div className="lg:col-span-2 xl:col-span-3 lg:h-[calc(100vh-140px)] flex flex-col">
             {!generatedContent && !loading ? (
                 <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center p-12 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500">
                     <div className="bg-white dark:bg-gray-800 p-4 rounded-full shadow-sm mb-4">
@@ -552,15 +553,11 @@ const PostGenerator: React.FC = () => {
                     <p className="max-w-xs mx-auto mt-2 text-sm">Configura tu campaña a la izquierda y presiona Generar para ver la magia.</p>
                 </div>
             ) : (
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col min-h-[600px] lg:h-[calc(100vh-140px)] transition-colors">
-                    
-                    {/* Main Workspace */}
-                    {activeTab && (
-                        <div className="flex-1 flex flex-col overflow-hidden">
-                            
-                            {/* SPLIT VIEW: Editor & Preview */}
-                            <div className="flex-1 flex flex-col xl:flex-row overflow-hidden">
-                                
+                <>
+                    {/* Main Workspace Card (Editor + Preview) */}
+                    <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col xl:flex-row min-h-0 transition-colors relative">
+                        {activeTab && (
+                            <>
                                 {/* 1. Editor Area (Left/Top) - Scrollable */}
                                 <div className="flex-1 flex flex-col overflow-y-auto p-6 border-b xl:border-b-0 xl:border-r border-gray-100 dark:border-gray-700 custom-scrollbar">
                                     
@@ -636,50 +633,49 @@ const PostGenerator: React.FC = () => {
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            {/* 3. DEDICATED ACTION BAR (Bottom) */}
-                            <div className="flex-none bg-white dark:bg-gray-800 p-4 border-t border-gray-200 dark:border-gray-700 z-10">
-                                <div className="flex flex-col sm:flex-row items-center gap-4 max-w-4xl mx-auto">
-                                    <div className="flex items-center gap-2 w-full sm:w-auto bg-gray-50 dark:bg-gray-700/50 p-2 rounded-lg border border-gray-200 dark:border-gray-600">
-                                        <Calendar size={18} className="text-gray-500 dark:text-gray-400 ml-2" />
-                                        <input 
-                                            type="datetime-local"
-                                            className="bg-transparent text-sm text-gray-700 dark:text-white outline-none flex-1"
-                                            value={scheduledDate}
-                                            onChange={(e) => setScheduledDate(e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="flex gap-2 w-full sm:w-auto flex-1 justify-end">
-                                        <button 
-                                            onClick={() => handleSave(PostStatus.Draft)}
-                                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                                        >
-                                            <Save size={16} /> <span className="inline">Borrador</span>
-                                        </button>
-                                        
-                                        {scheduledDate && (
-                                            <button 
-                                                onClick={() => handleSave(PostStatus.Scheduled)}
-                                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
-                                            >
-                                                <Calendar size={16} /> <span className="inline">Programar</span>
-                                            </button>
-                                        )}
+                            </>
+                        )}
+                    </div>
 
-                                        <button 
-                                            onClick={() => handleSave(PostStatus.Published)}
-                                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold transition-colors shadow-md hover:shadow-indigo-500/20"
-                                        >
-                                            <Rocket size={16} /> <span className="inline">Publicar</span>
-                                        </button>
-                                    </div>
-                                </div>
+                    {/* DEDICATED ACTION BAR CONTAINER (Separated) */}
+                    <div className="mt-4 flex-none bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 p-4 transition-colors z-10">
+                        <div className="flex flex-col sm:flex-row items-center gap-4">
+                            <div className="flex items-center gap-2 w-full sm:w-auto bg-gray-50 dark:bg-gray-700/50 p-2 rounded-lg border border-gray-200 dark:border-gray-600">
+                                <Calendar size={18} className="text-gray-500 dark:text-gray-400 ml-2" />
+                                <input 
+                                    type="datetime-local"
+                                    className="bg-transparent text-sm text-gray-700 dark:text-white outline-none flex-1"
+                                    value={scheduledDate}
+                                    onChange={(e) => setScheduledDate(e.target.value)}
+                                />
                             </div>
+                            <div className="flex gap-2 w-full sm:w-auto flex-1 justify-end">
+                                <button 
+                                    onClick={() => handleSave(PostStatus.Draft)}
+                                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                >
+                                    <Save size={16} /> <span className="inline">Borrador</span>
+                                </button>
+                                
+                                {scheduledDate && (
+                                    <button 
+                                        onClick={() => handleSave(PostStatus.Scheduled)}
+                                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+                                    >
+                                        <Calendar size={16} /> <span className="inline">Programar</span>
+                                    </button>
+                                )}
 
+                                <button 
+                                    onClick={() => handleSave(PostStatus.Published)}
+                                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold transition-colors shadow-md hover:shadow-indigo-500/20"
+                                >
+                                    <Rocket size={16} /> <span className="inline">Publicar</span>
+                                </button>
+                            </div>
                         </div>
-                    )}
-                </div>
+                    </div>
+                </>
             )}
         </div>
       </div>
