@@ -1,10 +1,11 @@
-import { CompanyProfile, SocialPost, User, PostStatus, Platform } from "../types";
+import { CompanyProfile, SocialPost, User, PostStatus, Platform, SocialConnection } from "../types";
 import { useState, useEffect } from 'react';
 
 // Keys
 const USER_KEY = 'postflow_user';
 const COMPANY_KEY = 'postflow_company';
 const POSTS_KEY = 'postflow_posts';
+const SOCIAL_CONFIG_KEY = 'postflow_social_config';
 const EVENT_NAME = 'postflow-storage-update';
 
 // Mock Data Generators
@@ -47,6 +48,29 @@ export const saveCompanyProfile = (profile: CompanyProfile) => {
 export const getCompanyProfile = (): CompanyProfile | null => {
   const stored = localStorage.getItem(COMPANY_KEY);
   return stored ? JSON.parse(stored) : null;
+};
+
+// Social Connections (API Keys)
+export const saveSocialConnection = (connection: SocialConnection) => {
+    const connections = getSocialConnections();
+    // Update or add
+    const index = connections.findIndex(c => c.platform === connection.platform);
+    if (index !== -1) {
+        connections[index] = connection;
+    } else {
+        connections.push(connection);
+    }
+    localStorage.setItem(SOCIAL_CONFIG_KEY, JSON.stringify(connections));
+    notifyListeners();
+};
+
+export const getSocialConnections = (): SocialConnection[] => {
+    const stored = localStorage.getItem(SOCIAL_CONFIG_KEY);
+    return stored ? JSON.parse(stored) : [];
+};
+
+export const getSocialConnection = (platform: Platform): SocialConnection | undefined => {
+    return getSocialConnections().find(c => c.platform === platform);
 };
 
 // Posts CRUD

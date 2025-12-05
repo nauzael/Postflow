@@ -27,6 +27,12 @@ export interface CompanyProfile {
   keywords: string[];
 }
 
+export interface SocialConnection {
+  platform: Platform;
+  isConnected: boolean;
+  credentials: Record<string, string>; // e.g., { apiKey: '...', apiSecret: '...' }
+}
+
 export interface SocialPost {
   id: string;
   userId: string;
