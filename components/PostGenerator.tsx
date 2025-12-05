@@ -25,7 +25,8 @@ import {
   ThumbsUp,
   MessageSquare,
   Globe,
-  Send as SendIcon
+  Send as SendIcon,
+  Edit3
 } from 'lucide-react';
 
 type ImageSource = 'none' | 'local' | 'ai';
@@ -58,7 +59,7 @@ const SocialPostPreview: React.FC<{
 
     if (platform === Platform.Twitter) {
         return (
-            <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl p-4 max-w-md mx-auto font-sans text-sm shadow-sm">
+            <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl p-4 max-w-md mx-auto font-sans text-sm shadow-sm transition-colors">
                 <div className="flex gap-3">
                     <img src={avatarUrl} alt="Avatar" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
                     <div className="flex-1 min-w-0">
@@ -90,7 +91,7 @@ const SocialPostPreview: React.FC<{
 
     if (platform === Platform.LinkedIn) {
         return (
-            <div className="bg-white dark:bg-[#1b1f23] border border-gray-300 dark:border-gray-700 rounded-lg max-w-md mx-auto font-sans text-sm shadow-sm overflow-hidden">
+            <div className="bg-white dark:bg-[#1b1f23] border border-gray-300 dark:border-gray-700 rounded-lg max-w-md mx-auto font-sans text-sm shadow-sm overflow-hidden transition-colors">
                 {/* Header */}
                 <div className="p-3 flex gap-2 mb-1">
                     <img src={avatarUrl} alt="Avatar" className="w-12 h-12 rounded-sm object-cover" />
@@ -143,7 +144,7 @@ const SocialPostPreview: React.FC<{
 
     if (platform === Platform.Instagram) {
         return (
-            <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl max-w-md mx-auto font-sans text-sm shadow-sm overflow-hidden">
+            <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl max-w-md mx-auto font-sans text-sm shadow-sm overflow-hidden transition-colors">
                 {/* Header */}
                 <div className="flex items-center justify-between p-3">
                     <div className="flex items-center gap-2">
@@ -185,7 +186,7 @@ const SocialPostPreview: React.FC<{
 
     if (platform === Platform.Facebook) {
         return (
-            <div className="bg-white dark:bg-[#242526] border border-gray-200 dark:border-gray-700 rounded-lg max-w-md mx-auto font-sans text-sm shadow-sm overflow-hidden">
+            <div className="bg-white dark:bg-[#242526] border border-gray-200 dark:border-gray-700 rounded-lg max-w-md mx-auto font-sans text-sm shadow-sm overflow-hidden transition-colors">
                 {/* Header */}
                 <div className="p-3 flex gap-2">
                     <img src={avatarUrl} alt="Avatar" className="w-10 h-10 rounded-full object-cover" />
@@ -269,11 +270,12 @@ const PostGenerator: React.FC = () => {
     if (user) setCurrentUser(user);
   }, []);
 
+  // REORDERED PLATFORMS: Defaults (Instagram, Facebook) on top
   const PLATFORMS_CONFIG = [
-    { id: Platform.Twitter, icon: Twitter, color: 'text-sky-500', limit: 280 },
-    { id: Platform.LinkedIn, icon: Linkedin, color: 'text-blue-700', limit: 3000 },
     { id: Platform.Instagram, icon: Instagram, color: 'text-pink-600', limit: 2200 },
     { id: Platform.Facebook, icon: Facebook, color: 'text-blue-600', limit: 63206 },
+    { id: Platform.LinkedIn, icon: Linkedin, color: 'text-blue-700', limit: 3000 },
+    { id: Platform.Twitter, icon: Twitter, color: 'text-sky-500', limit: 280 },
   ];
 
   const togglePlatform = (platform: Platform) => {
@@ -381,7 +383,7 @@ const PostGenerator: React.FC = () => {
   const currentImage = imageSource === 'local' ? localImage : imageSource === 'ai' ? generatedImage : null;
 
   return (
-    <div className="max-w-7xl mx-auto pb-12 space-y-8 animate-fade-in">
+    <div className="max-w-7xl mx-auto pb-12 space-y-6 animate-fade-in">
       
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -393,155 +395,156 @@ const PostGenerator: React.FC = () => {
         </h2>
       </div>
 
-      <div className="grid xl:grid-cols-12 gap-8">
+      <div className="grid lg:grid-cols-3 xl:grid-cols-4 gap-6 relative">
         
-        {/* LEFT COLUMN: CONFIGURATION (Wider on small screens, smaller on XL) */}
-        <div className="xl:col-span-4 space-y-6">
-            
-            {/* Topic Input */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 transition-colors">
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                    Tema o Idea Principal
-                </label>
-                <textarea
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none transition-all placeholder-gray-400"
-                    rows={4}
-                    placeholder="Ej: Lanzamiento de nueva colección de verano con 20% de descuento..."
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                />
-            </div>
+        {/* LEFT COLUMN: CONFIGURATION (Sticky on LG+) */}
+        <div className="lg:col-span-1">
+            <div className="space-y-4 sticky top-4">
+                {/* Topic Input */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 transition-colors">
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                        Tema o Idea Principal
+                    </label>
+                    <textarea
+                        className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none transition-all placeholder-gray-400 text-sm"
+                        rows={3}
+                        placeholder="Ej: Lanzamiento de nueva colección..."
+                        value={topic}
+                        onChange={(e) => setTopic(e.target.value)}
+                    />
+                </div>
 
-            {/* Platform Selector */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 transition-colors">
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
-                    Canales de Destino
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                    {PLATFORMS_CONFIG.map((p) => {
-                        const Icon = p.icon;
-                        const isSelected = selectedPlatforms.includes(p.id);
-                        return (
-                            <button
-                                key={p.id}
-                                onClick={() => togglePlatform(p.id)}
-                                className={`flex items-center space-x-2 p-3 rounded-lg border transition-all ${
-                                    isSelected 
-                                    ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' 
-                                    : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 text-gray-600 dark:text-gray-400'
+                {/* Platform Selector */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 transition-colors">
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
+                        Canales de Destino
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                        {PLATFORMS_CONFIG.map((p) => {
+                            const Icon = p.icon;
+                            const isSelected = selectedPlatforms.includes(p.id);
+                            return (
+                                <button
+                                    key={p.id}
+                                    onClick={() => togglePlatform(p.id)}
+                                    className={`flex items-center space-x-2 p-2.5 rounded-lg border transition-all ${
+                                        isSelected 
+                                        ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' 
+                                        : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 text-gray-600 dark:text-gray-400'
+                                    }`}
+                                >
+                                    <Icon size={16} className={isSelected ? 'text-indigo-600 dark:text-indigo-400' : ''} />
+                                    <span className="text-xs font-medium">{p.id}</span>
+                                </button>
+                            )
+                        })}
+                    </div>
+                </div>
+
+                {/* Media Selector */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 transition-colors">
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
+                        Multimedia
+                    </label>
+                    
+                    <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg mb-3">
+                        {(['none', 'local', 'ai'] as ImageSource[]).map((type) => (
+                             <button
+                                key={type}
+                                onClick={() => setImageSource(type)}
+                                className={`flex-1 py-1.5 text-xs font-medium rounded-md capitalize transition-all ${
+                                    imageSource === type 
+                                    ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white shadow-sm' 
+                                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                                 }`}
-                            >
-                                <Icon size={18} className={isSelected ? 'text-indigo-600 dark:text-indigo-400' : ''} />
-                                <span className="text-sm font-medium">{p.id}</span>
-                            </button>
-                        )
-                    })}
-                </div>
-            </div>
-
-            {/* Media Selector */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 transition-colors">
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
-                    Multimedia
-                </label>
-                
-                <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg mb-4">
-                    {(['none', 'local', 'ai'] as ImageSource[]).map((type) => (
-                         <button
-                            key={type}
-                            onClick={() => setImageSource(type)}
-                            className={`flex-1 py-1.5 text-xs font-medium rounded-md capitalize transition-all ${
-                                imageSource === type 
-                                ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white shadow-sm' 
-                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                            }`}
-                         >
-                            {type === 'none' ? 'Sin Imagen' : type === 'local' ? 'Subir' : 'Generar IA'}
-                         </button>
-                    ))}
-                </div>
-
-                {imageSource === 'local' && (
-                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
-                        {localImage ? (
-                            <div className="relative group">
-                                <img src={localImage} alt="Preview" className="w-full h-32 object-cover rounded-lg" />
-                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
-                                    <span className="text-white text-xs">Cambiar</span>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="space-y-2">
-                                <Upload className="mx-auto text-gray-400" size={24} />
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Click para subir (JPG, PNG)</p>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {imageSource === 'ai' && (
-                    <div className="space-y-3 animate-fade-in">
-                        <div>
-                             <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Estilo Visual</label>
-                             <select 
-                                value={imageStyle}
-                                onChange={(e) => setImageStyle(e.target.value)}
-                                className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                              >
-                                <option>Fotorealista</option>
-                                <option>Ilustración 3D</option>
-                                <option>Minimalista</option>
-                                <option>Cyberpunk</option>
-                                <option>Pop Art</option>
-                             </select>
+                                {type === 'none' ? 'Sin Imagen' : type === 'local' ? 'Subir' : 'Generar IA'}
+                             </button>
+                        ))}
+                    </div>
+
+                    {imageSource === 'local' && (
+                        <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
+                            {localImage ? (
+                                <div className="relative group">
+                                    <img src={localImage} alt="Preview" className="w-full h-24 object-cover rounded-lg" />
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                                        <span className="text-white text-xs">Cambiar</span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-1">
+                                    <Upload className="mx-auto text-gray-400" size={20} />
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Click para subir</p>
+                                </div>
+                            )}
                         </div>
-                        <div>
-                             <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Prompt Personalizado (Opcional)</label>
-                             <input 
-                                type="text"
-                                value={customImagePrompt}
-                                onChange={(e) => setCustomImagePrompt(e.target.value)}
-                                placeholder="Ej: Un gato futurista con gafas..."
-                                className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none placeholder-gray-400"
-                             />
+                    )}
+
+                    {imageSource === 'ai' && (
+                        <div className="space-y-3 animate-fade-in">
+                            <div>
+                                 <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Estilo Visual</label>
+                                 <select 
+                                    value={imageStyle}
+                                    onChange={(e) => setImageStyle(e.target.value)}
+                                    className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                                 >
+                                    <option>Fotorealista</option>
+                                    <option>Ilustración 3D</option>
+                                    <option>Minimalista</option>
+                                    <option>Cyberpunk</option>
+                                    <option>Pop Art</option>
+                                 </select>
+                            </div>
+                            <div>
+                                 <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Prompt Personalizado (Opcional)</label>
+                                 <input 
+                                    type="text"
+                                    value={customImagePrompt}
+                                    onChange={(e) => setCustomImagePrompt(e.target.value)}
+                                    placeholder="Ej: Un gato futurista..."
+                                    className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none placeholder-gray-400"
+                                 />
+                            </div>
+                            {generatedImage && (
+                                 <img src={generatedImage} alt="AI Generated" className="w-full h-24 object-cover rounded-lg shadow-sm border border-gray-200 dark:border-gray-600" />
+                            )}
                         </div>
-                        {generatedImage && (
-                             <img src={generatedImage} alt="AI Generated" className="w-full h-32 object-cover rounded-lg shadow-sm border border-gray-200 dark:border-gray-600" />
-                        )}
+                    )}
+                </div>
+
+                <button
+                    onClick={handleGenerate}
+                    disabled={loading || !topic}
+                    className={`w-full py-3 px-4 rounded-xl text-white font-bold text-base flex items-center justify-center space-x-2 transition-all transform active:scale-95 ${
+                    loading || !topic 
+                        ? 'bg-indigo-300 dark:bg-indigo-900/50 cursor-not-allowed' 
+                        : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-indigo-500/30'
+                    }`}
+                >
+                    {loading ? <RefreshCw className="animate-spin" size={20} /> : <Wand2 size={20} />}
+                    <span>{loading ? 'Trabajando...' : 'Generar Campaña'}</span>
+                </button>
+
+                {message && (
+                    <div className={`p-3 rounded-lg text-sm flex items-start gap-2 ${
+                    message.type === 'success' 
+                        ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300' 
+                        : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'
+                    }`}>
+                        {message.type === 'success' ? <CheckCircle2 size={16} className="mt-0.5" /> : <AlertCircle size={16} className="mt-0.5" />}
+                        {message.text}
                     </div>
                 )}
             </div>
-
-            <button
-                onClick={handleGenerate}
-                disabled={loading || !topic}
-                className={`w-full py-4 px-4 rounded-xl text-white font-bold text-lg flex items-center justify-center space-x-2 transition-all transform active:scale-95 ${
-                loading || !topic 
-                    ? 'bg-indigo-300 dark:bg-indigo-900/50 cursor-not-allowed' 
-                    : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-indigo-500/30'
-                }`}
-            >
-                {loading ? <RefreshCw className="animate-spin" /> : <Wand2 />}
-                <span>{loading ? 'Trabajando...' : 'Generar Campaña'}</span>
-            </button>
-
-            {message && (
-                <div className={`p-3 rounded-lg text-sm flex items-start gap-2 ${
-                message.type === 'success' 
-                    ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300' 
-                    : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'
-                }`}>
-                    {message.type === 'success' ? <CheckCircle2 size={16} className="mt-0.5" /> : <AlertCircle size={16} className="mt-0.5" />}
-                    {message.text}
-                </div>
-            )}
         </div>
 
-        {/* RIGHT COLUMN: PREVIEW & EDITOR */}
-        <div className="xl:col-span-8 h-full">
+        {/* RIGHT COLUMN: PREVIEW & EDITOR & ACTIONS */}
+        <div className="lg:col-span-2 xl:col-span-3 h-full">
             {!generatedContent && !loading ? (
-                <div className="h-full min-h-[500px] flex flex-col items-center justify-center text-center p-12 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500">
+                <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center p-12 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500">
                     <div className="bg-white dark:bg-gray-800 p-4 rounded-full shadow-sm mb-4">
                         <Wand2 size={32} className="text-indigo-400" />
                     </div>
@@ -549,55 +552,97 @@ const PostGenerator: React.FC = () => {
                     <p className="max-w-xs mx-auto mt-2 text-sm">Configura tu campaña a la izquierda y presiona Generar para ver la magia.</p>
                 </div>
             ) : (
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col h-full transition-colors">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col min-h-[600px] lg:h-[calc(100vh-140px)] transition-colors">
                     
-                    {/* Tabs */}
-                    <div className="flex border-b border-gray-100 dark:border-gray-700 overflow-x-auto no-scrollbar">
-                        {selectedPlatforms.map(p => {
-                             const config = PLATFORMS_CONFIG.find(c => c.id === p);
-                             const Icon = config?.icon || AlertCircle;
-                             return (
-                                <button
-                                    key={p}
-                                    onClick={() => setActiveTab(p)}
-                                    className={`flex items-center space-x-2 px-6 py-4 font-medium whitespace-nowrap transition-colors border-b-2 ${
-                                        activeTab === p 
-                                        ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/20' 
-                                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                                    }`}
-                                >
-                                    <Icon size={18} />
-                                    <span>{p}</span>
-                                </button>
-                             )
-                        })}
-                    </div>
-
-                    {/* Editor & Preview Area */}
+                    {/* Main Workspace */}
                     {activeTab && (
-                        <div className="flex-1 p-6 flex flex-col lg:flex-row gap-6">
+                        <div className="flex-1 flex flex-col overflow-hidden">
                             
-                            {/* Editor (Left/Top) */}
-                            <div className="flex-1 space-y-4 flex flex-col">
-                                <div className="flex justify-between items-center text-sm">
-                                    <label className="font-medium text-gray-700 dark:text-gray-300">Editor de Texto</label>
-                                    <span className={`text-xs ${
-                                        getCharCountColor(editedContent[activeTab]?.length || 0, PLATFORMS_CONFIG.find(c => c.id === activeTab)?.limit || 1000)
-                                    }`}>
-                                        {editedContent[activeTab]?.length || 0} / {PLATFORMS_CONFIG.find(c => c.id === activeTab)?.limit}
-                                    </span>
-                                </div>
-                                <textarea
-                                    value={editedContent[activeTab] || ''}
-                                    onChange={(e) => setEditedContent(prev => ({...prev, [activeTab]: e.target.value}))}
-                                    className="w-full flex-1 min-h-[200px] p-4 text-base border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white resize-none transition-colors font-mono text-sm"
-                                    placeholder="El contenido generado aparecerá aquí..."
-                                />
+                            {/* SPLIT VIEW: Editor & Preview */}
+                            <div className="flex-1 flex flex-col xl:flex-row overflow-hidden">
                                 
-                                {/* Action Bar inside Editor Column for better flow */}
-                                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 border border-gray-100 dark:border-gray-600 space-y-4">
-                                    <div className="flex items-center gap-2">
-                                        <Calendar size={18} className="text-gray-500 dark:text-gray-400" />
+                                {/* 1. Editor Area (Left/Top) - Scrollable */}
+                                <div className="flex-1 flex flex-col overflow-y-auto p-6 border-b xl:border-b-0 xl:border-r border-gray-100 dark:border-gray-700 custom-scrollbar">
+                                    
+                                    {/* Editor Header */}
+                                    <div className="flex-none flex justify-between items-center mb-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`p-2 rounded-lg bg-gray-100 dark:bg-gray-700 ${PLATFORMS_CONFIG.find(c => c.id === activeTab)?.color || ''}`}>
+                                                {React.createElement(PLATFORMS_CONFIG.find(c => c.id === activeTab)?.icon || Edit3, { size: 20 })}
+                                            </div>
+                                            <div>
+                                                <h3 className="font-bold text-gray-900 dark:text-white">Editando {activeTab}</h3>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">Personaliza el contenido para esta red</p>
+                                            </div>
+                                        </div>
+                                        <div className={`px-2 py-1 rounded-md text-xs font-bold ${
+                                            getCharCountColor(editedContent[activeTab]?.length || 0, PLATFORMS_CONFIG.find(c => c.id === activeTab)?.limit || 1000)
+                                        } bg-gray-100 dark:bg-gray-700`}>
+                                            {editedContent[activeTab]?.length || 0} / {PLATFORMS_CONFIG.find(c => c.id === activeTab)?.limit}
+                                        </div>
+                                    </div>
+                                    
+                                    <textarea
+                                        value={editedContent[activeTab] || ''}
+                                        onChange={(e) => setEditedContent(prev => ({...prev, [activeTab]: e.target.value}))}
+                                        className="w-full flex-1 min-h-[300px] p-4 text-base border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white resize-none transition-colors font-mono text-sm shadow-inner"
+                                        placeholder="El contenido generado aparecerá aquí..."
+                                    />
+                                </div>
+
+                                {/* 2. Live Preview Area (Right/Bottom) - Scrollable */}
+                                <div className="flex-1 flex flex-col bg-gray-50/50 dark:bg-gray-900/30">
+                                    {/* Sticky Tabs for Preview */}
+                                    <div className="flex-none sticky top-0 z-20 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur-sm p-3 border-b border-gray-200 dark:border-gray-700 overflow-x-auto no-scrollbar flex gap-2 justify-center xl:justify-start">
+                                        {selectedPlatforms.map(p => {
+                                            const config = PLATFORMS_CONFIG.find(c => c.id === p);
+                                            const Icon = config?.icon || AlertCircle;
+                                            return (
+                                                <button
+                                                    key={p}
+                                                    onClick={() => setActiveTab(p)}
+                                                    className={`flex items-center space-x-2 px-4 py-2 rounded-full text-xs font-bold transition-all border ${
+                                                        activeTab === p 
+                                                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' 
+                                                        : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500'
+                                                    }`}
+                                                >
+                                                    <Icon size={14} />
+                                                    <span>{p}</span>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+
+                                    <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                                        <div className="min-h-[400px] flex items-start justify-center">
+                                            <div className="w-full max-w-sm">
+                                                <SocialPostPreview 
+                                                    platform={activeTab}
+                                                    content={editedContent[activeTab] || ''}
+                                                    image={generatingImage ? null : currentImage} // Hide image if generating
+                                                    user={currentUser}
+                                                    companyName={companyName}
+                                                />
+                                                {generatingImage && (
+                                                    <div className="mt-4 text-center text-sm text-gray-500 animate-pulse">
+                                                        Generando imagen visual...
+                                                    </div>
+                                                )}
+                                                <p className="text-xs text-center text-gray-400 mt-6 pb-6">
+                                                    * La vista previa es aproximada.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* 3. DEDICATED ACTION BAR (Bottom) */}
+                            <div className="flex-none bg-white dark:bg-gray-800 p-4 border-t border-gray-200 dark:border-gray-700 z-10">
+                                <div className="flex flex-col sm:flex-row items-center gap-4 max-w-4xl mx-auto">
+                                    <div className="flex items-center gap-2 w-full sm:w-auto bg-gray-50 dark:bg-gray-700/50 p-2 rounded-lg border border-gray-200 dark:border-gray-600">
+                                        <Calendar size={18} className="text-gray-500 dark:text-gray-400 ml-2" />
                                         <input 
                                             type="datetime-local"
                                             className="bg-transparent text-sm text-gray-700 dark:text-white outline-none flex-1"
@@ -605,57 +650,31 @@ const PostGenerator: React.FC = () => {
                                             onChange={(e) => setScheduledDate(e.target.value)}
                                         />
                                     </div>
-                                    <div className="flex gap-2 flex-wrap">
+                                    <div className="flex gap-2 w-full sm:w-auto flex-1 justify-end">
                                         <button 
                                             onClick={() => handleSave(PostStatus.Draft)}
-                                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                                         >
-                                            <Save size={16} /> Borrador
+                                            <Save size={16} /> <span className="inline">Borrador</span>
                                         </button>
                                         
                                         {scheduledDate && (
                                             <button 
                                                 onClick={() => handleSave(PostStatus.Scheduled)}
-                                                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
                                             >
-                                                <Calendar size={16} /> Programar
+                                                <Calendar size={16} /> <span className="inline">Programar</span>
                                             </button>
                                         )}
 
                                         <button 
                                             onClick={() => handleSave(PostStatus.Published)}
-                                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold transition-colors"
+                                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold transition-colors shadow-md hover:shadow-indigo-500/20"
                                         >
-                                            <Rocket size={16} /> Publicar
+                                            <Rocket size={16} /> <span className="inline">Publicar</span>
                                         </button>
                                     </div>
                                 </div>
-                            </div>
-
-                            {/* Live Preview (Right/Bottom) */}
-                            <div className="flex-1 lg:border-l border-gray-100 dark:border-gray-700 lg:pl-6">
-                                <label className="block font-medium text-gray-700 dark:text-gray-300 mb-4 text-sm text-center lg:text-left">
-                                    Vista Previa en Vivo
-                                </label>
-                                <div className="bg-gray-100 dark:bg-gray-900/50 rounded-xl p-4 min-h-[400px] flex items-center justify-center border border-gray-200 dark:border-gray-700">
-                                    <div className="w-full max-w-sm">
-                                        <SocialPostPreview 
-                                            platform={activeTab}
-                                            content={editedContent[activeTab] || ''}
-                                            image={generatingImage ? null : currentImage} // Hide image if generating
-                                            user={currentUser}
-                                            companyName={companyName}
-                                        />
-                                        {generatingImage && (
-                                            <div className="mt-4 text-center text-sm text-gray-500 animate-pulse">
-                                                Generando imagen visual...
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                                <p className="text-xs text-center text-gray-400 mt-2">
-                                    * La vista previa es aproximada. El resultado final puede variar según el dispositivo.
-                                </p>
                             </div>
 
                         </div>
