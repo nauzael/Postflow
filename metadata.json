@@ -1,0 +1,5 @@
+{
+  "name": "PostFlow AI",
+  "description": "Una PWA inteligente para la gestión, generación y análisis de redes sociales impulsada por Gemini 2.5.",
+  "requestFramePermissions": []
+}
