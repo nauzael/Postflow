@@ -1,8 +1,6 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { CompanyProfile, GeneratedContent } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 // Schema for structured output
 const socialPostSchema: Schema = {
   type: Type.OBJECT,
@@ -21,6 +19,9 @@ export const generateSocialPosts = async (
   modelName: string = "gemini-2.5-flash"
 ): Promise<GeneratedContent | null> => {
   try {
+    // Initialize inside function to avoid startup crashes if environment variables are missing
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
     const prompt = `
       Actúa como un experto Community Manager para la empresa "${company.name}".
       
@@ -61,6 +62,8 @@ export const generateSocialPosts = async (
 export const analyzePostImpact = async (content: string, platform: string): Promise<{ score: number; suggestion: string }> => {
     // A simplified helper to "analyze" a post before publishing
     try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: `Analiza el siguiente post de ${platform} y dame una puntuación del 1 al 100 de impacto potencial y una sugerencia de mejora breve.\n\nPost: "${content}"`,
