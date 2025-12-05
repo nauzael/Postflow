@@ -39,7 +39,7 @@ const CalendarView: React.FC = () => {
                                         {post.platform}
                                     </span>
                                 </div>
-                                <p className="text-base text-gray-700 dark:text-gray-300 italic">"{post.content}"</p>
+                                <p className="text-base text-gray-700 dark:text-gray-300 italic whitespace-pre-line">"{post.content}"</p>
                             </div>
                         </div>
                     ))}

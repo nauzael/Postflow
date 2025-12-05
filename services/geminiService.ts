@@ -30,31 +30,36 @@ export const generateSocialPosts = async (
 
     // Rules per platform
     const rules = {
-      [Platform.Twitter]: "Max 280 chars, concise, heavy use of abbreviations if needed, 2-3 hashtags.",
-      [Platform.LinkedIn]: "Professional tone, structured formatting (bullet points), focus on industry value, 3-5 hashtags.",
-      [Platform.Instagram]: "Visual-first caption, engaging hook, line breaks for readability, block of 10-15 hashtags at the bottom.",
-      [Platform.Facebook]: "Conversational, community-focused, encourages sharing/comments, moderate length."
+      [Platform.Twitter]: "Max 280 chars. Usa un 'Hook' provocativo al inicio. Hilos si es necesario. 2-3 hashtags de tendencia.",
+      [Platform.LinkedIn]: "Tono profesional pero humano. Estructura: Gancho -> Contexto -> Valor -> Llamada a la acción. 3-5 hashtags estratégicos.",
+      [Platform.Instagram]: "Visual y emotivo. Primera línea debe obligar a leer más. Usa espacios. Bloque de 15-20 hashtags optimizados (mezcla de nicho y populares) al final.",
+      [Platform.Facebook]: "Comunitario y compartible. Preguntas abiertas para generar comentarios. Longitud media."
     };
 
     const selectedRules = platforms.map(p => `- ${p}: ${rules[p]}`).join("\n");
 
     const prompt = `
-      Actúa como un experto Community Manager para la empresa "${company.name}".
+      Actúa como un experto Estratega de Redes Sociales y Growth Hacker para la empresa "${company.name}".
       
       Detalles de la empresa:
       - Industria: ${company.industry}
       - Tono: ${company.tone}
       - Descripción: ${company.description}
       
-      Tarea: Genera posts para las siguientes redes sociales sobre el tema: "${topic}".
+      Tarea: Genera posts virales para las siguientes redes sociales sobre el tema: "${topic}".
+      
+      ESTRATEGIA DE TENDENCIAS Y VIRALIDAD (IMPORTANTE):
+      1. HOOKS: Cada post debe comenzar con un gancho irresistible (pregunta retórica, dato impactante, afirmación controversial) para detener el scroll.
+      2. HASHTAGS: No uses hashtags genéricos. Usa una mezcla de hashtags de tendencia actual (#Trending), hashtags de nicho y hashtags de marca.
+      3. ESTRUCTURA: Usa saltos de línea CLAROS (doble enter) para separar párrafos. Usa emojis estratégicos como viñetas. El texto NO debe verse como un bloque denso.
+      4. COPYWRITING: Enfócate en el beneficio para el lector, no solo en las características de la empresa.
       
       Reglas Específicas por Red Social:
       ${selectedRules}
       
       Requisitos Globales:
       1. Mantén el tono de marca "${company.tone}".
-      2. Usa emojis apropiados.
-      3. Devuelve SOLAMENTE el objeto JSON con las claves correspondientes a las redes solicitadas (${platforms.map(p => p.toLowerCase()).join(', ')}).
+      2. Devuelve SOLAMENTE el objeto JSON con las claves correspondientes a las redes solicitadas (${platforms.map(p => p.toLowerCase()).join(', ')}).
     `;
 
     const response = await ai.models.generateContent({
@@ -63,7 +68,7 @@ export const generateSocialPosts = async (
       config: {
         responseMimeType: "application/json",
         responseSchema: createDynamicSchema(platforms),
-        temperature: 0.7,
+        temperature: 0.75, // Slightly higher for creativity/viral hooks
       },
     });
 
@@ -77,28 +82,35 @@ export const generateSocialPosts = async (
   }
 };
 
-export const generateAIImage = async (prompt: string, style: string = 'photorealistic'): Promise<string | null> => {
+export const generateAIImage = async (topic: string, style: string = 'photorealistic', customPrompt?: string): Promise<string | null> => {
     try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         
-        const imagePrompt = `Create a high quality, professional social media image about: ${prompt}. Style: ${style}. Aspect ratio 1:1.`;
+        // Logic: Use custom prompt if provided, otherwise build from topic + style
+        const finalPrompt = customPrompt && customPrompt.trim() !== '' 
+            ? `${customPrompt}. Style: ${style}. Aspect ratio 1:1. High quality.` 
+            : `Create a high quality, professional social media image about: ${topic}. Style: ${style}. Aspect ratio 1:1. High contrast, vibrant colors, trending aesthetic.`;
 
-        const response = await ai.models.generateImages({
-            model: 'imagen-4.0-generate-001',
-            prompt: imagePrompt,
-            config: {
-              numberOfImages: 1,
-              outputMimeType: 'image/jpeg',
-              aspectRatio: '1:1',
+        // Using gemini-2.5-flash-image (Nano Banana)
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: {
+              parts: [{ text: finalPrompt }]
             },
+            config: {
+               // Nano banana does not support responseMimeType or responseSchema
+            }
         });
 
-        // Handle Imagen response structure
-        const base64Image = response.generatedImages?.[0]?.image?.imageBytes;
-        
-        if (base64Image) {
-            return `data:image/jpeg;base64,${base64Image}`;
+        // Iterate through parts to find the image
+        if (response.candidates?.[0]?.content?.parts) {
+            for (const part of response.candidates[0].content.parts) {
+                if (part.inlineData) {
+                    return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+                }
+            }
         }
+        
         return null;
     } catch (error) {
         console.error("Error generating image:", error);
@@ -112,7 +124,7 @@ export const analyzePostImpact = async (content: string, platform: string): Prom
         
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: `Analiza el siguiente post de ${platform} y dame una puntuación del 1 al 100 de impacto potencial y una sugerencia de mejora breve.\n\nPost: "${content}"`,
+            contents: `Analiza el siguiente post de ${platform} considerando las tendencias actuales. Dame una puntuación del 1 al 100 de potencial viral y una sugerencia de mejora.\n\nPost: "${content}"`,
             config: {
                 responseMimeType: "application/json",
                 responseSchema: {

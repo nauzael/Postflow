@@ -1,34 +1,250 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { generateSocialPosts, generateAIImage } from '../services/geminiService';
-import { savePost, getCompanyProfile } from '../services/storageService';
-import { GeneratedContent, Platform, PostStatus } from '../types';
+import { savePost, getCompanyProfile, getCurrentUser } from '../services/storageService';
+import { GeneratedContent, Platform, PostStatus, User } from '../types';
 import { 
-  Send, 
   Calendar, 
   Save, 
   RefreshCw, 
   Wand2, 
   Image as ImageIcon, 
   Upload, 
-  X,
   CheckCircle2,
   AlertCircle,
   Linkedin,
   Twitter,
   Instagram,
-  Facebook
+  Facebook,
+  Rocket,
+  Heart,
+  MessageCircle,
+  Repeat,
+  Share2,
+  MoreHorizontal,
+  Bookmark,
+  ThumbsUp,
+  MessageSquare,
+  Globe,
+  Send as SendIcon
 } from 'lucide-react';
 
 type ImageSource = 'none' | 'local' | 'ai';
 
+// --- SUB-COMPONENT: REALISTIC PREVIEW ---
+const SocialPostPreview: React.FC<{
+    platform: Platform;
+    content: string;
+    image: string | null;
+    user: User | null;
+    companyName: string;
+}> = ({ platform, content, image, user, companyName }) => {
+    
+    const avatarUrl = user?.photoURL || `https://ui-avatars.com/api/?name=${companyName}&background=random`;
+    const displayName = companyName || user?.displayName || "Mi Empresa";
+    const handle = "@" + displayName.toLowerCase().replace(/\s/g, '');
+    const dateStr = "2h"; // Mock time
+
+    // Helper to highlight hashtags/mentions
+    const renderContent = (text: string) => {
+        if (!text) return <span className="text-gray-400 italic">Escribe para previsualizar...</span>;
+        
+        return text.split(/(\s+)/).map((word, i) => {
+            if (word.startsWith('#') || word.startsWith('@')) {
+                return <span key={i} className="text-blue-500 cursor-pointer hover:underline">{word}</span>;
+            }
+            return word;
+        });
+    };
+
+    if (platform === Platform.Twitter) {
+        return (
+            <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl p-4 max-w-md mx-auto font-sans text-sm shadow-sm">
+                <div className="flex gap-3">
+                    <img src={avatarUrl} alt="Avatar" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1 text-gray-900 dark:text-gray-100">
+                            <span className="font-bold truncate">{displayName}</span>
+                            <span className="text-gray-500 dark:text-gray-500 truncate">{handle}</span>
+                            <span className="text-gray-500">·</span>
+                            <span className="text-gray-500 hover:underline">{dateStr}</span>
+                        </div>
+                        <p className="text-gray-900 dark:text-gray-100 mt-1 whitespace-pre-line leading-normal">
+                            {renderContent(content)}
+                        </p>
+                        {image && (
+                            <div className="mt-3 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800">
+                                <img src={image} alt="Post content" className="w-full object-cover max-h-80" />
+                            </div>
+                        )}
+                        <div className="flex justify-between items-center mt-3 text-gray-500 max-w-xs">
+                            <button className="flex items-center gap-1 hover:text-blue-500 transition-colors"><MessageCircle size={16} /> <span className="text-xs">12</span></button>
+                            <button className="flex items-center gap-1 hover:text-green-500 transition-colors"><Repeat size={16} /> <span className="text-xs">4</span></button>
+                            <button className="flex items-center gap-1 hover:text-pink-500 transition-colors"><Heart size={16} /> <span className="text-xs">32</span></button>
+                            <button className="flex items-center gap-1 hover:text-blue-500 transition-colors"><Share2 size={16} /></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (platform === Platform.LinkedIn) {
+        return (
+            <div className="bg-white dark:bg-[#1b1f23] border border-gray-300 dark:border-gray-700 rounded-lg max-w-md mx-auto font-sans text-sm shadow-sm overflow-hidden">
+                {/* Header */}
+                <div className="p-3 flex gap-2 mb-1">
+                    <img src={avatarUrl} alt="Avatar" className="w-12 h-12 rounded-sm object-cover" />
+                    <div>
+                        <div className="font-semibold text-gray-900 dark:text-white leading-tight">{displayName}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 leading-tight truncate w-48">Innovative Solutions • {companyName}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                            {dateStr} • <Globe size={10} />
+                        </div>
+                    </div>
+                    <button className="ml-auto text-gray-500"><MoreHorizontal size={20} /></button>
+                </div>
+                {/* Content */}
+                <div className="px-3 pb-2 text-gray-900 dark:text-gray-200 whitespace-pre-line leading-relaxed text-sm">
+                    {renderContent(content)}
+                </div>
+                {/* Image */}
+                {image && (
+                    <img src={image} alt="Post content" className="w-full object-cover border-t border-b border-gray-100 dark:border-gray-700" />
+                )}
+                {/* Stats */}
+                <div className="px-3 py-2 text-xs text-gray-500 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                    <div className="flex items-center gap-1">
+                        <div className="flex -space-x-1">
+                            <div className="bg-blue-500 rounded-full p-0.5"><ThumbsUp size={8} className="text-white" fill="white"/></div>
+                            <div className="bg-red-500 rounded-full p-0.5"><Heart size={8} className="text-white" fill="white"/></div>
+                        </div>
+                        <span className="hover:underline hover:text-blue-600 cursor-pointer">45</span>
+                    </div>
+                    <span className="hover:underline hover:text-blue-600 cursor-pointer">5 comments • 2 reposts</span>
+                </div>
+                {/* Actions */}
+                <div className="flex justify-between px-4 py-1">
+                    <button className="flex items-center gap-1.5 py-3 px-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-300 font-semibold">
+                        <ThumbsUp size={18} /> <span className="hidden sm:inline">Like</span>
+                    </button>
+                    <button className="flex items-center gap-1.5 py-3 px-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-300 font-semibold">
+                        <MessageSquare size={18} /> <span className="hidden sm:inline">Comment</span>
+                    </button>
+                    <button className="flex items-center gap-1.5 py-3 px-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-300 font-semibold">
+                        <Repeat size={18} /> <span className="hidden sm:inline">Repost</span>
+                    </button>
+                    <button className="flex items-center gap-1.5 py-3 px-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-300 font-semibold">
+                        <SendIcon size={18} /> <span className="hidden sm:inline">Send</span>
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (platform === Platform.Instagram) {
+        return (
+            <div className="bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl max-w-md mx-auto font-sans text-sm shadow-sm overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between p-3">
+                    <div className="flex items-center gap-2">
+                         <div className="bg-gradient-to-tr from-yellow-400 to-purple-600 p-[2px] rounded-full">
+                            <img src={avatarUrl} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-white dark:border-black object-cover" />
+                         </div>
+                        <span className="font-semibold text-sm text-gray-900 dark:text-white">{displayName.toLowerCase().replace(/\s/g, '')}</span>
+                    </div>
+                    <MoreHorizontal className="text-gray-900 dark:text-white" size={20} />
+                </div>
+                {/* Image */}
+                <div className="aspect-square bg-gray-100 dark:bg-gray-900 flex items-center justify-center overflow-hidden">
+                     {image ? (
+                        <img src={image} alt="Post content" className="w-full h-full object-cover" />
+                     ) : (
+                        <div className="text-gray-400 text-xs">Sin Imagen (Instagram requiere imagen)</div>
+                     )}
+                </div>
+                {/* Actions */}
+                <div className="p-3">
+                    <div className="flex justify-between mb-2">
+                        <div className="flex gap-4">
+                            <Heart size={24} className="text-gray-900 dark:text-white hover:text-gray-600 cursor-pointer" />
+                            <MessageCircle size={24} className="text-gray-900 dark:text-white hover:text-gray-600 cursor-pointer transform -rotate-90" />
+                            <SendIcon size={24} className="text-gray-900 dark:text-white hover:text-gray-600 cursor-pointer" />
+                        </div>
+                        <Bookmark size={24} className="text-gray-900 dark:text-white hover:text-gray-600 cursor-pointer" />
+                    </div>
+                    <div className="font-semibold text-sm mb-1 text-gray-900 dark:text-white">1,234 likes</div>
+                    <div className="text-sm text-gray-900 dark:text-white leading-tight">
+                        <span className="font-semibold mr-2">{displayName.toLowerCase().replace(/\s/g, '')}</span>
+                        <span className="whitespace-pre-line">{renderContent(content)}</span>
+                    </div>
+                    <div className="text-gray-500 text-xs mt-2 uppercase">2 HOURS AGO</div>
+                </div>
+            </div>
+        );
+    }
+
+    if (platform === Platform.Facebook) {
+        return (
+            <div className="bg-white dark:bg-[#242526] border border-gray-200 dark:border-gray-700 rounded-lg max-w-md mx-auto font-sans text-sm shadow-sm overflow-hidden">
+                {/* Header */}
+                <div className="p-3 flex gap-2">
+                    <img src={avatarUrl} alt="Avatar" className="w-10 h-10 rounded-full object-cover" />
+                    <div>
+                        <div className="font-semibold text-gray-900 dark:text-gray-100">{displayName}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                            {dateStr} • <Globe size={10} />
+                        </div>
+                    </div>
+                    <button className="ml-auto text-gray-500"><MoreHorizontal size={20} /></button>
+                </div>
+                {/* Content */}
+                <div className="px-3 pb-2 text-gray-900 dark:text-gray-100 whitespace-pre-line text-sm leading-normal">
+                    {renderContent(content)}
+                </div>
+                {/* Image */}
+                {image && (
+                    <img src={image} alt="Post content" className="w-full object-cover max-h-96" />
+                )}
+                {/* Stats */}
+                <div className="px-4 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-1 text-gray-500 text-xs">
+                        <div className="bg-blue-500 rounded-full p-1"><ThumbsUp size={8} fill="white" className="text-white"/></div>
+                        <span>24</span>
+                    </div>
+                    <div className="text-gray-500 text-xs">
+                        3 comments • 1 share
+                    </div>
+                </div>
+                {/* Actions */}
+                <div className="flex px-2 py-1">
+                    <button className="flex-1 flex items-center justify-center gap-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-300 font-medium">
+                        <ThumbsUp size={18} /> Like
+                    </button>
+                    <button className="flex-1 flex items-center justify-center gap-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-300 font-medium">
+                        <MessageSquare size={18} /> Comment
+                    </button>
+                    <button className="flex-1 flex items-center justify-center gap-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-300 font-medium">
+                        <Share2 size={18} /> Share
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    return null;
+}
+
+// --- MAIN COMPONENT ---
+
 const PostGenerator: React.FC = () => {
   // Config State
   const [topic, setTopic] = useState('');
-  const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([Platform.Twitter, Platform.LinkedIn]);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([Platform.Instagram, Platform.Facebook]);
   const [imageSource, setImageSource] = useState<ImageSource>('none');
   const [localImage, setLocalImage] = useState<string | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [imageStyle, setImageStyle] = useState('Fotorealista');
+  const [customImagePrompt, setCustomImagePrompt] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Process State
@@ -41,6 +257,17 @@ const PostGenerator: React.FC = () => {
   const [editedContent, setEditedContent] = useState<Record<string, string>>({});
   const [scheduledDate, setScheduledDate] = useState('');
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+
+  // User/Company Data
+  const [companyName, setCompanyName] = useState('Mi Empresa');
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const profile = getCompanyProfile();
+    const user = getCurrentUser();
+    if (profile) setCompanyName(profile.name);
+    if (user) setCurrentUser(user);
+  }, []);
 
   const PLATFORMS_CONFIG = [
     { id: Platform.Twitter, icon: Twitter, color: 'text-sky-500', limit: 280 },
@@ -104,9 +331,8 @@ const PostGenerator: React.FC = () => {
       // 2. Generate Image if selected
       if (imageSource === 'ai') {
         setGeneratingImage(true);
-        // Combine topic + style for prompt
-        const imgPrompt = `${topic}. Estilo: ${imageStyle}`;
-        const imgResult = await generateAIImage(imgPrompt, imageStyle);
+        // Pass optional custom prompt
+        const imgResult = await generateAIImage(topic, imageStyle, customImagePrompt);
         if (imgResult) {
             setGeneratedImage(imgResult);
         }
@@ -128,22 +354,21 @@ const PostGenerator: React.FC = () => {
 
     const content = editedContent[activeTab];
     const finalImage = imageSource === 'local' ? localImage : imageSource === 'ai' ? generatedImage : undefined;
+    const finalDate = status === PostStatus.Scheduled ? scheduledDate : undefined;
 
     savePost({
       userId: profile.userId,
       content: content,
       platform: activeTab,
       status: status,
-      scheduledDate: status === PostStatus.Scheduled ? scheduledDate : undefined,
+      scheduledDate: finalDate,
       mediaUrl: finalImage || undefined
     });
 
     setMessage({ 
       type: 'success', 
-      text: status === PostStatus.Published ? 'Publicado correctamente' : 'Guardado correctamente' 
+      text: status === PostStatus.Published ? '¡Publicado exitosamente!' : 'Guardado correctamente' 
     });
-    
-    // Optional: Clear saved item from list or mark as done visualy (not implemented for simplicity)
   };
 
   const getCharCountColor = (current: number, max: number) => {
@@ -153,8 +378,10 @@ const PostGenerator: React.FC = () => {
     return 'text-gray-400';
   };
 
+  const currentImage = imageSource === 'local' ? localImage : imageSource === 'ai' ? generatedImage : null;
+
   return (
-    <div className="max-w-5xl mx-auto pb-12 space-y-8 animate-fade-in">
+    <div className="max-w-7xl mx-auto pb-12 space-y-8 animate-fade-in">
       
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -166,10 +393,10 @@ const PostGenerator: React.FC = () => {
         </h2>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid xl:grid-cols-12 gap-8">
         
-        {/* LEFT COLUMN: CONFIGURATION */}
-        <div className="lg:col-span-1 space-y-6">
+        {/* LEFT COLUMN: CONFIGURATION (Wider on small screens, smaller on XL) */}
+        <div className="xl:col-span-4 space-y-6">
             
             {/* Topic Input */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 transition-colors">
@@ -254,7 +481,7 @@ const PostGenerator: React.FC = () => {
                 )}
 
                 {imageSource === 'ai' && (
-                    <div className="space-y-3">
+                    <div className="space-y-3 animate-fade-in">
                         <div>
                              <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Estilo Visual</label>
                              <select 
@@ -268,6 +495,16 @@ const PostGenerator: React.FC = () => {
                                 <option>Cyberpunk</option>
                                 <option>Pop Art</option>
                              </select>
+                        </div>
+                        <div>
+                             <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Prompt Personalizado (Opcional)</label>
+                             <input 
+                                type="text"
+                                value={customImagePrompt}
+                                onChange={(e) => setCustomImagePrompt(e.target.value)}
+                                placeholder="Ej: Un gato futurista con gafas..."
+                                className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none placeholder-gray-400"
+                             />
                         </div>
                         {generatedImage && (
                              <img src={generatedImage} alt="AI Generated" className="w-full h-32 object-cover rounded-lg shadow-sm border border-gray-200 dark:border-gray-600" />
@@ -302,9 +539,9 @@ const PostGenerator: React.FC = () => {
         </div>
 
         {/* RIGHT COLUMN: PREVIEW & EDITOR */}
-        <div className="lg:col-span-2">
+        <div className="xl:col-span-8 h-full">
             {!generatedContent && !loading ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-12 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500">
+                <div className="h-full min-h-[500px] flex flex-col items-center justify-center text-center p-12 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500">
                     <div className="bg-white dark:bg-gray-800 p-4 rounded-full shadow-sm mb-4">
                         <Wand2 size={32} className="text-indigo-400" />
                     </div>
@@ -336,14 +573,14 @@ const PostGenerator: React.FC = () => {
                         })}
                     </div>
 
-                    {/* Editor Area */}
+                    {/* Editor & Preview Area */}
                     {activeTab && (
-                        <div className="flex-1 p-6 space-y-6">
+                        <div className="flex-1 p-6 flex flex-col lg:flex-row gap-6">
                             
-                            {/* Text Editor */}
-                            <div className="space-y-2">
+                            {/* Editor (Left/Top) */}
+                            <div className="flex-1 space-y-4 flex flex-col">
                                 <div className="flex justify-between items-center text-sm">
-                                    <label className="font-medium text-gray-700 dark:text-gray-300">Contenido del Post</label>
+                                    <label className="font-medium text-gray-700 dark:text-gray-300">Editor de Texto</label>
                                     <span className={`text-xs ${
                                         getCharCountColor(editedContent[activeTab]?.length || 0, PLATFORMS_CONFIG.find(c => c.id === activeTab)?.limit || 1000)
                                     }`}>
@@ -353,83 +590,72 @@ const PostGenerator: React.FC = () => {
                                 <textarea
                                     value={editedContent[activeTab] || ''}
                                     onChange={(e) => setEditedContent(prev => ({...prev, [activeTab]: e.target.value}))}
-                                    className="w-full h-48 p-4 text-base border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white resize-none transition-colors"
+                                    className="w-full flex-1 min-h-[200px] p-4 text-base border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white resize-none transition-colors font-mono text-sm"
                                     placeholder="El contenido generado aparecerá aquí..."
                                 />
-                            </div>
-
-                            {/* Image Preview in Editor */}
-                            {(imageSource !== 'none' || generatingImage) && (
-                                <div className="border border-gray-200 dark:border-gray-600 rounded-xl p-4 bg-gray-50 dark:bg-gray-700/30">
-                                    <label className="font-medium text-gray-700 dark:text-gray-300 text-sm mb-3 block">Multimedia Adjunta</label>
-                                    
-                                    {generatingImage ? (
-                                        <div className="flex items-center justify-center h-48 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse">
-                                            <div className="text-center">
-                                                <ImageIcon className="mx-auto text-gray-400 mb-2" size={32} />
-                                                <p className="text-sm text-gray-500">Creando imagen con IA...</p>
-                                            </div>
-                                        </div>
-                                    ) : (imageSource === 'local' && localImage) || (imageSource === 'ai' && generatedImage) ? (
-                                        <div className="relative aspect-video rounded-lg overflow-hidden shadow-sm">
-                                            <img 
-                                                src={imageSource === 'local' ? localImage! : generatedImage!} 
-                                                alt="Post attachment" 
-                                                className="w-full h-full object-cover"
-                                            />
-                                            <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
-                                                {imageSource === 'ai' ? 'Generada por IA' : 'Imagen Local'}
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="h-24 flex items-center justify-center border border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-400 text-sm">
-                                            No hay imagen seleccionada
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                            
-                            {/* Scheduling & Actions */}
-                            <div className="border-t border-gray-100 dark:border-gray-700 pt-6">
-                                <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-                                    <div className="w-full sm:w-auto flex items-center bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2">
-                                        <Calendar size={18} className="text-gray-500 dark:text-gray-400 mr-2" />
+                                
+                                {/* Action Bar inside Editor Column for better flow */}
+                                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 border border-gray-100 dark:border-gray-600 space-y-4">
+                                    <div className="flex items-center gap-2">
+                                        <Calendar size={18} className="text-gray-500 dark:text-gray-400" />
                                         <input 
                                             type="datetime-local"
-                                            className="bg-transparent text-sm text-gray-700 dark:text-white outline-none"
+                                            className="bg-transparent text-sm text-gray-700 dark:text-white outline-none flex-1"
                                             value={scheduledDate}
                                             onChange={(e) => setScheduledDate(e.target.value)}
                                         />
                                     </div>
-
-                                    <div className="flex gap-3 w-full sm:w-auto">
+                                    <div className="flex gap-2 flex-wrap">
                                         <button 
                                             onClick={() => handleSave(PostStatus.Draft)}
-                                            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 py-2.5 px-5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium transition-colors"
+                                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                                         >
-                                            <Save size={18} />
-                                            <span>Borrador</span>
+                                            <Save size={16} /> Borrador
                                         </button>
                                         
-                                        {scheduledDate ? (
+                                        {scheduledDate && (
                                             <button 
                                                 onClick={() => handleSave(PostStatus.Scheduled)}
-                                                className="flex-1 sm:flex-none flex items-center justify-center space-x-2 py-2.5 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium shadow-sm transition-colors"
+                                                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
                                             >
-                                                <Calendar size={18} />
-                                                <span>Programar</span>
+                                                <Calendar size={16} /> Programar
                                             </button>
-                                        ) : (
-                                            <button 
-                                                onClick={() => handleSave(PostStatus.Published)}
-                                                className="flex-1 sm:flex-none flex items-center justify-center space-x-2 py-2.5 px-5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium shadow-sm transition-colors"
-                                            >
-                                                <Send size={18} />
-                                                <span>Publicar</span>
-                                            </button>
+                                        )}
+
+                                        <button 
+                                            onClick={() => handleSave(PostStatus.Published)}
+                                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold transition-colors"
+                                        >
+                                            <Rocket size={16} /> Publicar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Live Preview (Right/Bottom) */}
+                            <div className="flex-1 lg:border-l border-gray-100 dark:border-gray-700 lg:pl-6">
+                                <label className="block font-medium text-gray-700 dark:text-gray-300 mb-4 text-sm text-center lg:text-left">
+                                    Vista Previa en Vivo
+                                </label>
+                                <div className="bg-gray-100 dark:bg-gray-900/50 rounded-xl p-4 min-h-[400px] flex items-center justify-center border border-gray-200 dark:border-gray-700">
+                                    <div className="w-full max-w-sm">
+                                        <SocialPostPreview 
+                                            platform={activeTab}
+                                            content={editedContent[activeTab] || ''}
+                                            image={generatingImage ? null : currentImage} // Hide image if generating
+                                            user={currentUser}
+                                            companyName={companyName}
+                                        />
+                                        {generatingImage && (
+                                            <div className="mt-4 text-center text-sm text-gray-500 animate-pulse">
+                                                Generando imagen visual...
+                                            </div>
                                         )}
                                     </div>
                                 </div>
+                                <p className="text-xs text-center text-gray-400 mt-2">
+                                    * La vista previa es aproximada. El resultado final puede variar según el dispositivo.
+                                </p>
                             </div>
 
                         </div>

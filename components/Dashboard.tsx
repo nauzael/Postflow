@@ -56,7 +56,7 @@ const Dashboard: React.FC = () => {
                   </span>
                   <StatusBadge status={post.status} />
                 </div>
-                <p className="text-gray-700 dark:text-gray-300 text-sm line-clamp-4 mb-4">{post.content}</p>
+                <p className="text-gray-700 dark:text-gray-300 text-sm line-clamp-4 mb-4 whitespace-pre-line">{post.content}</p>
               </div>
               
               <div className="border-t border-gray-100 dark:border-gray-700 pt-3 flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">

@@ -1,4 +1,5 @@
 import { CompanyProfile, SocialPost, User, PostStatus, Platform } from "../types";
+import { useState, useEffect } from 'react';
 
 // Keys
 const USER_KEY = 'postflow_user';
@@ -106,11 +107,18 @@ export const seedData = (userId: string) => {
     }));
     changed = true;
   }
-  if (getPosts().length === 0) {
+  
+  const currentPosts = getPosts();
+  
+  // Always ensure we have the sample posts for demo visualization
+  const demoId1 = 'demo-post-1';
+  const demoId2 = 'demo-rich-post-2';
+
+  if (!currentPosts.find(p => p.id === demoId1)) {
       const samplePost: SocialPost = {
-          id: generateId(),
+          id: demoId1,
           userId,
-          content: "¡Estamos emocionados de lanzar nuestra nueva feature de IA! #TechNova #AI",
+          content: "¡Estamos emocionados de lanzar nuestra nueva feature de IA! 🚀\n\nEsto cambiará la forma en que trabajas. #TechNova #AI",
           platform: Platform.Twitter,
           status: PostStatus.Published,
           scheduledDate: new Date(Date.now() - 86400000).toISOString(),
@@ -124,15 +132,49 @@ export const seedData = (userId: string) => {
             engagementRate: 3.5
           }
       };
-      localStorage.setItem(POSTS_KEY, JSON.stringify([samplePost]));
+      currentPosts.push(samplePost);
       changed = true;
   }
-  if (changed) notifyListeners();
+
+  // Add a rich post to test new UI features (Images, Line breaks, Dark mode contrast)
+  if (!currentPosts.find(p => p.id === demoId2)) {
+      const richPost: SocialPost = {
+        id: demoId2,
+        userId,
+        content: `🚀 Transformando el futuro digital.
+
+¿Sabías que el 80% de las empresas que adoptan IA duplican su productividad en 6 meses? No se trata solo de tecnología, se trata de *visión*.
+
+En TechNova, estamos liderando este cambio con herramientas que se adaptan a ti.
+
+💡 ¿Estás listo para el siguiente nivel?
+
+#Innovation #FutureOfWork #AI #TechTrends #BusinessGrowth`,
+        platform: Platform.LinkedIn,
+        status: PostStatus.Published,
+        scheduledDate: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        mediaUrl: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&auto=format&fit=crop&q=60",
+        analytics: {
+            postId: generateId(),
+            likes: 850,
+            shares: 120,
+            comments: 65,
+            impressions: 12500,
+            engagementRate: 6.8
+        }
+      };
+      currentPosts.push(richPost);
+      changed = true;
+  }
+
+  if (changed) {
+      localStorage.setItem(POSTS_KEY, JSON.stringify(currentPosts));
+      notifyListeners();
+  }
 };
 
 // React Hook for subscription
-import { useState, useEffect } from 'react';
-
 export const usePosts = () => {
   const [posts, setPosts] = useState<SocialPost[]>(getPosts());
 
