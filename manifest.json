@@ -8,12 +8,12 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/192px-Google_%22G%22_logo.svg.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/2620/2620602.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/512px-Google_%22G%22_logo.svg.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/2620/2620602.png",
       "sizes": "512x512",
       "type": "image/png"
     }
