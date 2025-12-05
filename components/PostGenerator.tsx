@@ -292,9 +292,15 @@ const PostGenerator: React.FC = () => {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate File Size (Max 1MB for Firestore safety)
+      if (file.size > 1024 * 1024) {
+          setMessage({ type: 'error', text: 'La imagen es demasiado grande. Máximo 1MB.' });
+          return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setLocalImage(reader.result as string);
+        setMessage(null); // Clear previous errors
       };
       reader.readAsDataURL(file);
     }
@@ -381,6 +387,13 @@ const PostGenerator: React.FC = () => {
          return;
     }
 
+    // Character Limit Check
+    const limit = PLATFORMS_CONFIG.find(c => c.id === activeTab)?.limit || 1000;
+    if (content.length > limit) {
+         setMessage({ type: 'error', text: `El contenido excede el límite de caracteres de ${activeTab} (${limit}).` });
+         return;
+    }
+
     if (status === PostStatus.Scheduled && !scheduledDate) {
         setMessage({ type: 'error', text: 'Por favor selecciona una fecha y hora para programar.' });
         return;
@@ -410,9 +423,21 @@ const PostGenerator: React.FC = () => {
             text: status === PostStatus.Published ? '¡Publicado exitosamente!' : 'Guardado correctamente.' 
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error saving post:", error);
-        setMessage({ type: 'error', text: 'Ocurrió un error al guardar. Intenta nuevamente.' });
+        
+        let errorMsg = 'Ocurrió un error al guardar. Intenta nuevamente.';
+        
+        // Detailed error check
+        if (error.message?.includes('quota') || error.code === 'storage/quota-exceeded') {
+             errorMsg = 'Error de espacio: La imagen es demasiado pesada o el almacenamiento está lleno.';
+        } else if (error.code === 'permission-denied' || error.message?.includes('permission')) {
+             errorMsg = 'Permiso denegado. Verifica tu sesión o reglas de base de datos.';
+        } else if (error.message?.includes('argument')) {
+             errorMsg = 'Datos inválidos. Verifica que el contenido no sea nulo.';
+        }
+
+        setMessage({ type: 'error', text: errorMsg });
     } finally {
         setSaving(false);
     }
