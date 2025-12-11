@@ -19,7 +19,12 @@ import {
     onAuthStateChanged, 
     User as FirebaseUser 
 } from 'firebase/auth';
-import { auth, googleProvider, db } from './firebase';
+import { 
+    ref, 
+    uploadString, 
+    getDownloadURL 
+} from 'firebase/storage';
+import { auth, googleProvider, db, storage } from './firebase';
 
 // Collections
 const USERS_COL = 'users';
@@ -363,6 +368,31 @@ export const getSocialConnection = (platform: Platform): SocialConnection | unde
     const stored = localStorage.getItem(`postflow_social_${user.uid}`);
     const connections: SocialConnection[] = stored ? JSON.parse(stored) : [];
     return connections.find(c => c.platform === platform);
+};
+
+// --- FILE STORAGE ---
+
+export const uploadImage = async (userId: string, dataUrl: string): Promise<string> => {
+    // If it's already a http url, return it
+    if (dataUrl.startsWith('http')) return dataUrl;
+    
+    // Demo Mode bypass
+    if (isDemoUser(userId)) return dataUrl;
+
+    try {
+        const timestamp = Date.now();
+        // Create reference: uploads/USER_ID/TIMESTAMP.png
+        const storageRef = ref(storage, `uploads/${userId}/${timestamp}.png`);
+        
+        // Upload Base64 string
+        await uploadString(storageRef, dataUrl, 'data_url');
+        
+        // Get Public URL
+        return await getDownloadURL(storageRef);
+    } catch (error) {
+        console.error("Error uploading image:", error);
+        throw new Error("No se pudo subir la imagen a la nube. Verifica permisos o cuota.");
+    }
 };
 
 

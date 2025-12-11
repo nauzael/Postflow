@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { generateSocialPosts, generateAIImage } from '../services/geminiService';
-import { savePost, getCompanyProfile, getCurrentUser, getSocialConnection } from '../services/storageService';
+import { savePost, getCompanyProfile, getCurrentUser, getSocialConnection, uploadImage } from '../services/storageService';
 import { publishToSocialNetwork } from '../services/publishService';
 import { GeneratedContent, Platform, PostStatus, User } from '../types';
 import { 
@@ -403,11 +403,28 @@ const PostGenerator: React.FC = () => {
     setSaving(true);
     setMessage(null);
 
-    const finalImage = imageSource === 'local' ? localImage : imageSource === 'ai' ? generatedImage : undefined;
+    let finalImage = imageSource === 'local' ? localImage : imageSource === 'ai' ? generatedImage : undefined;
 
     try {
+        // --- AUTO UPLOAD IMAGE TO FIREBASE STORAGE (If Base64) ---
+        // Instagram and others require a public URL, not base64.
+        if (finalImage && finalImage.startsWith('data:')) {
+            setMessage({ type: 'success', text: 'Subiendo imagen a la nube...' });
+            try {
+                finalImage = await uploadImage(user.uid, finalImage);
+            } catch (e) {
+                console.error("Upload error", e);
+                // Fail gracefully or throw? 
+                // If publishing, we must throw. If draft, maybe ok.
+                if (status === PostStatus.Published) {
+                    throw new Error("No se pudo subir la imagen. Verifica tu conexión.");
+                }
+            }
+        }
+
         // --- REAL PUBLISHING LOGIC ---
         if (status === PostStatus.Published) {
+            setMessage({ type: 'success', text: `Publicando en ${activeTab}...` });
             const connection = getSocialConnection(activeTab);
             
             // Note: If no connection configured, we warn but allow saving to DB as published (manual post)
@@ -425,7 +442,6 @@ const PostGenerator: React.FC = () => {
         const finalDate = status === PostStatus.Scheduled ? scheduledDate : undefined;
 
         // FIX: Always use the authenticated user's ID to satisfy Firestore security rules
-        // The profile.userId might be stale or incorrect in some edge cases.
         const targetUserId = user.uid;
 
         await savePost({
