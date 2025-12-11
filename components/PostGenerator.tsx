@@ -293,9 +293,9 @@ const PostGenerator: React.FC = () => {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate File Size (Max 1MB for Firestore safety)
-      if (file.size > 1024 * 1024) {
-          setMessage({ type: 'error', text: 'La imagen es demasiado grande. Máximo 1MB.' });
+      // Validate File Size (Max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+          setMessage({ type: 'error', text: 'La imagen es demasiado grande. Máximo 2MB.' });
           return;
       }
       const reader = new FileReader();
@@ -409,16 +409,32 @@ const PostGenerator: React.FC = () => {
         // --- AUTO UPLOAD IMAGE TO FIREBASE STORAGE (If Base64) ---
         // Instagram and others require a public URL, not base64.
         if (finalImage && finalImage.startsWith('data:')) {
-            setMessage({ type: 'success', text: 'Subiendo imagen a la nube...' });
+            setMessage({ type: 'success', text: 'Subiendo imagen a la nube (esto puede tardar unos segundos)...' });
+            
             try {
-                finalImage = await uploadImage(user.uid, finalImage);
-            } catch (e) {
+                // Add a simple timeout promise wrapper to avoid infinite hanging
+                const uploadPromise = uploadImage(user.uid, finalImage);
+                const timeoutPromise = new Promise<string>((_, reject) => 
+                    setTimeout(() => reject(new Error("Tiempo de espera agotado al subir imagen")), 30000)
+                );
+                
+                finalImage = await Promise.race([uploadPromise, timeoutPromise]);
+
+            } catch (e: any) {
                 console.error("Upload error", e);
-                // Fail gracefully or throw? 
-                // If publishing, we must throw. If draft, maybe ok.
-                if (status === PostStatus.Published) {
-                    throw new Error("No se pudo subir la imagen. Verifica tu conexión.");
+                
+                // If publishing, we MUST have a public URL.
+                if (status === PostStatus.Published || status === PostStatus.Scheduled) {
+                    throw new Error(e.message || "Error al subir imagen. No se puede publicar sin URL pública.");
                 }
+                
+                // If Draft, we can fallback to saving base64 to Firestore IF it's small enough.
+                // 1MB limit for Firestore docs. Base64 adds ~33% overhead.
+                if (finalImage.length > 900000) {
+                     throw new Error("La imagen es demasiado grande para guardarse sin subir a la nube. Intenta con una imagen más pequeña.");
+                }
+                // If small enough, we keep finalImage as base64 and save to Firestore (fallback)
+                setMessage({ type: 'success', text: 'Guardando borrador con imagen local...' });
             }
         }
 
@@ -427,21 +443,17 @@ const PostGenerator: React.FC = () => {
             setMessage({ type: 'success', text: `Publicando en ${activeTab}...` });
             const connection = getSocialConnection(activeTab);
             
-            // Note: If no connection configured, we warn but allow saving to DB as published (manual post)
             if (connection && connection.isConnected) {
                 const publishResult = await publishToSocialNetwork(activeTab, content, finalImage, connection);
                 if (!publishResult.success) {
                     throw new Error(publishResult.error || "Error desconocido al publicar en la red social.");
                 }
             } else if (activeTab === Platform.Instagram || activeTab === Platform.Facebook) {
-                 // Soft warning for user
                  console.warn("No API connection found. Saving as published in DB only.");
             }
         }
 
         const finalDate = status === PostStatus.Scheduled ? scheduledDate : undefined;
-
-        // FIX: Always use the authenticated user's ID to satisfy Firestore security rules
         const targetUserId = user.uid;
 
         await savePost({
@@ -463,7 +475,6 @@ const PostGenerator: React.FC = () => {
         
         let errorMsg = 'Ocurrió un error al guardar. Intenta nuevamente.';
         
-        // Detailed error check
         if (error.message?.includes('quota') || error.code === 'storage/quota-exceeded') {
              errorMsg = 'Error de espacio: La imagen es demasiado pesada o el almacenamiento está lleno.';
         } else if (error.code === 'permission-denied' || error.message?.includes('permission')) {
@@ -471,7 +482,7 @@ const PostGenerator: React.FC = () => {
         } else if (error.message?.includes('argument')) {
              errorMsg = 'Datos inválidos. Verifica que el contenido no sea nulo.';
         } else {
-             errorMsg = error.message; // Show API error
+             errorMsg = error.message; 
         }
 
         setMessage({ type: 'error', text: errorMsg });

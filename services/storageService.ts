@@ -21,7 +21,7 @@ import {
 } from 'firebase/auth';
 import { 
     ref, 
-    uploadString, 
+    uploadBytes, 
     getDownloadURL 
 } from 'firebase/storage';
 import { auth, googleProvider, db, storage } from './firebase';
@@ -372,6 +372,23 @@ export const getSocialConnection = (platform: Platform): SocialConnection | unde
 
 // --- FILE STORAGE ---
 
+// Helper to convert base64 dataURL to Blob
+const dataURLtoBlob = (dataurl: string): Blob | null => {
+    try {
+        const arr = dataurl.split(',');
+        const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while(n--){
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], {type: mime});
+    } catch (e) {
+        return null;
+    }
+};
+
 export const uploadImage = async (userId: string, dataUrl: string): Promise<string> => {
     // If it's already a http url, return it
     if (dataUrl.startsWith('http')) return dataUrl;
@@ -380,18 +397,27 @@ export const uploadImage = async (userId: string, dataUrl: string): Promise<stri
     if (isDemoUser(userId)) return dataUrl;
 
     try {
+        const blob = dataURLtoBlob(dataUrl);
+        if (!blob) throw new Error("La imagen tiene un formato inválido.");
+
         const timestamp = Date.now();
         // Create reference: uploads/USER_ID/TIMESTAMP.png
         const storageRef = ref(storage, `uploads/${userId}/${timestamp}.png`);
         
-        // Upload Base64 string
-        await uploadString(storageRef, dataUrl, 'data_url');
+        // Metadata
+        const metadata = { contentType: blob.type };
+
+        // Upload Blob (More robust than uploadString for large files)
+        await uploadBytes(storageRef, blob, metadata);
         
         // Get Public URL
         return await getDownloadURL(storageRef);
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error uploading image:", error);
-        throw new Error("No se pudo subir la imagen a la nube. Verifica permisos o cuota.");
+        if (error.code === 'storage/unauthorized') {
+            throw new Error("Permiso denegado en el almacenamiento. Verifica tu conexión o cuenta.");
+        }
+        throw new Error("No se pudo subir la imagen a la nube. " + (error.message || ""));
     }
 };
 
