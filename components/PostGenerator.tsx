@@ -424,8 +424,9 @@ const PostGenerator: React.FC = () => {
 
         const finalDate = status === PostStatus.Scheduled ? scheduledDate : undefined;
 
-        // Use profile userId if available, otherwise fallback to current user uid
-        const targetUserId = profile?.userId || user.uid;
+        // FIX: Always use the authenticated user's ID to satisfy Firestore security rules
+        // The profile.userId might be stale or incorrect in some edge cases.
+        const targetUserId = user.uid;
 
         await savePost({
             userId: targetUserId,
@@ -450,7 +451,7 @@ const PostGenerator: React.FC = () => {
         if (error.message?.includes('quota') || error.code === 'storage/quota-exceeded') {
              errorMsg = 'Error de espacio: La imagen es demasiado pesada o el almacenamiento está lleno.';
         } else if (error.code === 'permission-denied' || error.message?.includes('permission')) {
-             errorMsg = 'Permiso denegado. Verifica tu sesión o reglas de base de datos.';
+             errorMsg = 'Permiso denegado. Verifica tu sesión o intenta recargar la página.';
         } else if (error.message?.includes('argument')) {
              errorMsg = 'Datos inválidos. Verifica que el contenido no sea nulo.';
         } else {

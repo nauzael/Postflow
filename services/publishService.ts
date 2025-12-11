@@ -73,20 +73,27 @@ export const verifyConnection = async (
 // --- API IMPLEMENTATIONS ---
 
 const verifyFacebook = async (creds: Record<string, string>): Promise<VerificationResult> => {
-    if (!creds.accessToken || !creds.pageId) return { success: false, message: "Faltan datos." };
+    // CLEANUP: Trim whitespace to avoid "Cannot parse access token" errors
+    const accessToken = creds.accessToken?.trim();
+    const pageId = creds.pageId?.trim();
+
+    if (!accessToken || !pageId) return { success: false, message: "Faltan datos." };
     
     // Validar formato numérico
-    if (!/^\d+$/.test(creds.pageId)) {
+    if (!/^\d+$/.test(pageId)) {
         return { success: false, message: "El ID de Página debe contener solo números." };
     }
 
     // Simple GET request to check page name
-    const url = `https://graph.facebook.com/v18.0/${creds.pageId}?fields=name,id&access_token=${creds.accessToken}`;
+    const url = `https://graph.facebook.com/v18.0/${pageId}?fields=name,id&access_token=${accessToken}`;
     
     const response = await fetch(url);
     const data = await response.json();
 
     if (data.error) {
+        if (data.error.code === 190) {
+             return { success: false, message: "Token inválido (Error 190). Verifica que no haya espacios al copiarlo o genera uno nuevo." };
+        }
         return { success: false, message: `Facebook API: ${data.error.message}` };
     }
 
@@ -94,15 +101,20 @@ const verifyFacebook = async (creds: Record<string, string>): Promise<Verificati
 };
 
 const verifyInstagram = async (creds: Record<string, string>): Promise<VerificationResult> => {
-    if (!creds.accessToken || !creds.pageId) return { success: false, message: "Faltan datos." };
+    // CLEANUP: Trim whitespace to avoid "Cannot parse access token" errors
+    const accessToken = creds.accessToken?.trim();
+    const pageId = creds.pageId?.trim();
 
-    // Validar formato numérico estricto para evitar errores de objetos no encontrados por IDs basura
-    if (!/^\d+$/.test(creds.pageId)) {
-        return { success: false, message: "El ID debe ser numérico. Parece que has copiado un Token o Secret en lugar del ID (ej: 1784...)." };
+    if (!accessToken || !pageId) return { success: false, message: "Faltan datos." };
+
+    // Validar formato numérico estricto
+    if (!/^\d+$/.test(pageId)) {
+        return { success: false, message: "El ID debe ser numérico. Parece que has copiado un Token o Secret en lugar del ID." };
     }
 
     // Intento 1: Verificar si es un ID de Instagram Business válido
-    const url = `https://graph.facebook.com/v18.0/${creds.pageId}?fields=username&access_token=${creds.accessToken}`;
+    // NOTA: Usamos graph.facebook.com, NO graph.instagram.com, porque estamos usando Business Discovery/Publishing
+    const url = `https://graph.facebook.com/v18.0/${pageId}?fields=username&access_token=${accessToken}`;
 
     const response = await fetch(url);
     const data = await response.json();
@@ -111,34 +123,46 @@ const verifyInstagram = async (creds: Record<string, string>): Promise<Verificat
         return { success: true, message: `Conectado correctamente como: @${data.username}` };
     }
 
-    // Intento 2: DIAGNÓSTICO INTELIGENTE
-    // Si falla, verificamos si el usuario puso el ID de la Página de Facebook por error
-    if (data.error.code === 100 || data.error.type === 'OAuthException') {
-         const pageUrl = `https://graph.facebook.com/v18.0/${creds.pageId}?fields=instagram_business_account&access_token=${creds.accessToken}`;
-         try {
-             const pageRes = await fetch(pageUrl);
-             const pageData = await pageRes.json();
-             
-             if (pageData.instagram_business_account && pageData.instagram_business_account.id) {
-                 return { 
-                     success: false, 
-                     message: `¡Error de ID! Has puesto el ID de Facebook. Tu ID de Instagram es: ${pageData.instagram_business_account.id} (Cópialo y pégalo).` 
-                 };
-             } else if (pageData.id) {
-                 return {
-                     success: false,
-                     message: "Este ID es de Facebook y NO tiene un Instagram Business conectado. Vincula tu cuenta en la configuración de Facebook."
-                 };
-             }
-         } catch(e) {}
+    // MANEJO DE ERRORES ESPECÍFICOS
+    if (data.error) {
+        // Error 190: Invalid OAuth access token
+        if (data.error.code === 190) {
+            return { 
+                success: false, 
+                message: "Error de Token (190): El Access Token es inválido o tiene espacios extra. Cópialo de nuevo asegurándote de no incluir espacios." 
+            };
+        }
+        
+        // Error 100/OAuthException: Posible ID de Facebook en lugar de IG
+        if (data.error.code === 100 || data.error.type === 'OAuthException') {
+            const pageUrl = `https://graph.facebook.com/v18.0/${pageId}?fields=instagram_business_account&access_token=${accessToken}`;
+            try {
+                const pageRes = await fetch(pageUrl);
+                const pageData = await pageRes.json();
+                
+                if (pageData.instagram_business_account && pageData.instagram_business_account.id) {
+                    return { 
+                        success: false, 
+                        message: `¡Error de ID! Has puesto el ID de Facebook. Tu ID de Instagram es: ${pageData.instagram_business_account.id} (Cópialo y pégalo).` 
+                    };
+                } else if (pageData.id) {
+                    return {
+                        success: false,
+                        message: "Este ID es de Facebook y NO tiene un Instagram Business conectado. Vincula tu cuenta en la configuración de Facebook."
+                    };
+                }
+            } catch(e) {}
+        }
+
+        return { success: false, message: `Instagram API: ${data.error.message}` };
     }
 
-    return { success: false, message: `Instagram API: ${data.error.message}` };
+    return { success: false, message: "Error desconocido." };
 };
 
 const publishToFacebook = async (message: string, imageUrl: string | undefined, creds: Record<string, string>): Promise<PublishResult> => {
-    const pageId = creds.pageId;
-    const accessToken = creds.accessToken;
+    const pageId = creds.pageId?.trim();
+    const accessToken = creds.accessToken?.trim();
 
     if (!pageId || !accessToken) throw new Error("Faltan Page ID o Access Token.");
 
@@ -151,7 +175,6 @@ const publishToFacebook = async (message: string, imageUrl: string | undefined, 
     params.append('access_token', accessToken);
     
     // If there is an image URL (must be public, not base64), add it.
-    // Facebook API works best with public URLs. Base64 often fails without upload first.
     if (imageUrl && imageUrl.startsWith('http')) {
         params.append('link', imageUrl);
     }
@@ -171,8 +194,8 @@ const publishToFacebook = async (message: string, imageUrl: string | undefined, 
 };
 
 const publishToInstagram = async (caption: string, imageUrl: string | undefined, creds: Record<string, string>): Promise<PublishResult> => {
-    const accountId = creds.pageId; // In Instagram context, this is the Instagram Business Account ID
-    const accessToken = creds.accessToken;
+    const accountId = creds.pageId?.trim(); 
+    const accessToken = creds.accessToken?.trim();
 
     if (!accountId || !accessToken) throw new Error("Faltan Instagram Business ID o Access Token.");
 
