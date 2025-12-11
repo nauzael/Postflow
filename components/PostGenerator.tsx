@@ -29,7 +29,8 @@ import {
   Send as SendIcon,
   Edit3,
   WifiOff,
-  Loader2
+  Loader2,
+  Bot
 } from 'lucide-react';
 
 type ImageSource = 'none' | 'local' | 'ai';
@@ -249,6 +250,7 @@ const PostGenerator: React.FC = () => {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [imageStyle, setImageStyle] = useState('Fotorealista');
   const [customImagePrompt, setCustomImagePrompt] = useState('');
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-flash');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Process State
@@ -332,7 +334,7 @@ const PostGenerator: React.FC = () => {
 
     try {
       // 1. Generate Text
-      const textResult = await generateSocialPosts(topic, profile, selectedPlatforms);
+      const textResult = await generateSocialPosts(topic, profile, selectedPlatforms, selectedModel);
       
       if (textResult) {
         setGeneratedContent(textResult);
@@ -530,6 +532,23 @@ const PostGenerator: React.FC = () => {
                         value={topic}
                         onChange={(e) => setTopic(e.target.value)}
                     />
+                </div>
+
+                {/* Model Selector */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 transition-colors">
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                        <Bot size={16} className="text-indigo-500" />
+                        Modelo IA
+                    </label>
+                    <select
+                        value={selectedModel}
+                        onChange={(e) => setSelectedModel(e.target.value)}
+                        className="w-full p-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                    >
+                        <option value="gemini-2.5-flash">Gemini 2.5 Flash (Rápido)</option>
+                        <option value="gemini-2.5-flash-lite-latest">Gemini 2.5 Flash Lite (Ligero)</option>
+                        <option value="gemini-3-pro-preview">Gemini 3.0 Pro (Razonamiento)</option>
+                    </select>
                 </div>
 
                 {/* Platform Selector */}
